@@ -5,8 +5,7 @@ bool is_audio(String filename) {
          filename.endsWith(F(".M4A")) or filename.endsWith(F(".WAV"));
 }
 
-// TODO: do I need a * or a & or something for playlist?
-void loadTracks(char *dir, Playlist playlist) {
+void loadTracks(char* dir, Playlist& playlist) {
   static File root;
 
   // TODO: make sure the database is open
@@ -112,7 +111,7 @@ void loadPlaylists() {
 }
 
 // pass play_count and current_track by reference so we can support multiple playlists
-void playTrackFromPlaylist(Playlist playlist) {
+void playTrackFromPlaylist(Playlist& playlist) {
   if (!musicPlayer.stopped()) {
     // something is already playing. abort
     // we also can't use the database while something is playing
