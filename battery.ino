@@ -1,7 +1,4 @@
-enum BatteryStatus : byte { BATTERY_DEAD, BATTERY_LOW, BATTERY_OK, BATTERY_FULL };
-
-// TODO: why won't this let us set the return type to Battery Status?
-byte checkBattery() {
+BatteryStatus checkBattery() {
   // TODO: do something with this
   float measuredvbat = analogRead(VBAT_PIN);
   measuredvbat *= 2;    // we divided by 2, so multiply back

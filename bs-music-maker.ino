@@ -15,6 +15,8 @@
 #include <SD.h>
 #include <SPI.h>
 
+#include "types.h"
+
 // These are the pins used
 #define VS1053_RESET -1 // VS1053 reset pin (not used!)
 
