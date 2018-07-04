@@ -47,6 +47,9 @@ void updateLights() {
 
   // update the led array every frame
   EVERY_N_MILLISECONDS(1000 / frames_per_second) {
+
+    // TODO: turn lights off if no music is playing
+    // TODO: turn lights off if configured to only be on for X minutes (lights to get to bed vs nightlight-mode)
     pride();
 
 #ifdef DEBUG
