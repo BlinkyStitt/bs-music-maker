@@ -50,20 +50,20 @@ RTCZero rtc;
 uint8_t g_hue = 0;
 
 // define database ids
-#if defined(MOTION_ACTIVATED)
+#ifdef MOTION_ACTIVATED
 
 // TODO: v2: don't hard code this. loop over directories to create playlists instead
 #define PLAYLIST_MUSIC 0
 #define NUM_PLAYLISTS 1
 
-#else
+#else  // !MOTION_ACTIVATED
 
 // TODO: v2: don't hard code this. loop over directories to create playlists instead
 #define PLAYLIST_SPOKEN_WORD 0
 #define PLAYLIST_NIGHT_SOUNDS 1
 #define NUM_PLAYLISTS 2
 
-#endif
+#endif  // MOTION_ACTIVATED
 
 Playlist playlists[NUM_PLAYLISTS];
 
@@ -82,7 +82,7 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect so we can watch all prints during setup
   }
-#endif
+#endif  // DEBUG
 
   DEBUG_PRINTLN(F("Setting up..."));
 
@@ -118,12 +118,20 @@ void setup() {
 
   loadPlaylists();
 
-  if (alarm_hours or alarm_minutes or alarm_seconds) {
-    rtc.begin();
+// TODO: what is the right syntax for "if not defined"?
+#ifdef MOTION_ACTIVATED
 
+  setupInterrupts();
+
+#else  // !MOTION_ACTIVATED
+  if (alarm_hours or alarm_minutes or alarm_seconds) {
+    rtc.attachInterrupt(alarmMatch);
+    rtc.begin();
   }
+#endif // MOTION_ACTIVATED
 
   DEBUG_PRINTLN(F("Starting..."));
+  delay(10000);  // TODO: remove this once sleep code is well tested
 }
 
 /*
@@ -168,63 +176,67 @@ EDB db(&writer, &reader);
 
 #ifdef MOTION_ACTIVATED
 
+// run when START_PIN is RISING
+void playMotionActivated() {
+  // TODO: save how many songs are played?
+  playTrackFromPlaylist(playlists[PLAYLIST_MUSIC]);
+}
+
 // loop for motion activated sounds for a adopted porta potty
 // TODO: this plays a whole song before turning off. should we tie it more to the PIR?
 void loop() {
   static bool lightsOn = false;
+  static int off_frames = 0;
+  static const int sleep_frames = 10; // give the lights enough frames to fade to black before sleeping
 
   if (musicPlayer.stopped()) {
-    // sleep waiting for START_PIN to go HIGH?
     if (digitalRead(START_PIN) == HIGH) {
-      // motion detected!
+      // there is still motion. start a new song and stay on
+      DEBUG_PRINTLN("Motion detected!");
+      playMotionActivated();
       lightsOn = true;
-
-      // start the next song
-      playTrackFromPlaylist(playlists[PLAYLIST_MUSIC]);
+      off_frames = 0;
     } else {
-      // no motion, turn off the lights
-      // TODO: should we do some sort of low power mode after a couple seconds?
+      // music has ended had there is no motion. turn off
       lightsOn = false;
+      off_frames++;
+
+      if (off_frames >= sleep_frames) {
+        sleep();
+
+        playMotionActivated();
+        lightsOn = true;
+        off_frames = 0;
+      }
     }
+  } else {
+    lightsOn = true;
+    off_frames = 0;
   }
 
   updateLights(lightsOn);
   FastLED.delay(1000 / frames_per_second);
 }
 
-#else
+#else  // !MOTION_ACTIVATED
 
-    // TODO: turn lights off if no music is playing
-    // TODO: turn lights off if configured to only be on for X minutes (lights to get to bed vs nightlight-mode)
-
-bool g_music_on = true;
+volatile bool g_music_on = true;
 bool g_lights_on = false;
 
-// TODO: use rtc for turning off lights/music after a set amount of time?
-
+// use rtc for turning off lights/music after a set amount of time?
 void alarmMatch() {
   g_music_on = false;
 }
 
 // loop for night sounds
 void loop() {
-  // TODO: wait for a button press to start? then (if config has a time for lights, turn lights on)
-  // TODO: how should we turn lights off after a timer expires?
+  // sleep to save power. waiting for button press (START_PIN to be RISING)
+  sleep();
 
-  // wait for a button to be pressed
-  // TODO: use bounce library instead of simple digitalRead?
-  while (musicPlayer.stopped()) {
-    // sleep waiting for START_PIN to go HIGH?
-    if (digitalRead(START_PIN) == HIGH) {
-      g_lights_on = true;   // TODO: make lights optional
-      g_music_on = true;
-      playTrackFromPlaylist(playlists[PLAYLIST_SPOKEN_WORD]);
-      break;
-    }
-
-    updateLights(g_lights_on);
-    FastLED.delay(1000 / frames_per_second);
-  }
+  // button was pressed! start the show
+  g_lights_on = true;   // TODO: make lights optional
+  g_music_on = true;
+  playTrackFromPlaylist(playlists[PLAYLIST_SPOKEN_WORD]);
 
   // wait for the meditation track to finish
   while (!musicPlayer.stopped()) {
@@ -232,12 +244,11 @@ void loop() {
     FastLED.delay(1000 / frames_per_second);
   }
 
-  // set timer for night sounds now that the meditation is over
+  // set timer for night sounds to turn off now that the meditation is over
   if (alarm_hours or alarm_minutes or alarm_seconds) {
     rtc.setTime(0, 0, 0);
     rtc.setAlarmTime(alarm_hours, alarm_minutes, alarm_seconds);
     rtc.enableAlarm(rtc.MATCH_HHMMSS);
-    rtc.attachInterrupt(alarmMatch);
   }
 
   // loop night sounds
@@ -258,4 +269,4 @@ void loop() {
   }
 }
 
-#endif
+#endif // MOTION_ACTIVATED
