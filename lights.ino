@@ -21,36 +21,42 @@ void setupLights() {
   DEBUG_PRINTLN("done.");
 }
 
-void updateLights() {
+void updateLights(bool& lightsOn) {
   static unsigned long last_frame = 0;
 
-  // decrease overall brightness if battery is low
-  // TODO: how often should we do this?
-  EVERY_N_SECONDS(120) {
-    switch (checkBattery()) {
-    case BATTERY_DEAD:
-      // TODO: use map_float(quadwave8(millis()), 0, 256, 0.3, 0.5);
-      // TODO: maybe add a red led to a strip of 8 LEDs?
-      FastLED.setBrightness(default_brightness * .5);
-      break;
-    case BATTERY_LOW:
-      FastLED.setBrightness(default_brightness * .75);
-      break;
-    case BATTERY_OK:
-      FastLED.setBrightness(default_brightness * .90);
-      break;
-    case BATTERY_FULL:
-      FastLED.setBrightness(default_brightness);
-      break;
+  if (lightsOn) {
+    // decrease overall brightness if battery is low
+    // TODO: how often should we do this?
+    EVERY_N_SECONDS(120) {
+      switch (checkBattery()) {
+      case BATTERY_DEAD:
+        // TODO: use map_float(quadwave8(millis()), 0, 256, 0.3, 0.5);
+        // TODO: maybe add a red led to a strip of 8 LEDs?
+        FastLED.setBrightness(default_brightness * .5);
+        break;
+      case BATTERY_LOW:
+        FastLED.setBrightness(default_brightness * .75);
+        break;
+      case BATTERY_OK:
+        FastLED.setBrightness(default_brightness * .90);
+        break;
+      case BATTERY_FULL:
+        FastLED.setBrightness(default_brightness);
+        break;
+      }
     }
   }
 
   // update the led array every frame
   EVERY_N_MILLISECONDS(1000 / frames_per_second) {
+    if (lightsOn) {
+      // TODO: if not motion activated and config has a time limit for lights, set lightsOn = false
 
-    // TODO: turn lights off if no music is playing
-    // TODO: turn lights off if configured to only be on for X minutes (lights to get to bed vs nightlight-mode)
-    pride();
+      pride();
+    } else {
+      // TODO: is this fast if all the lights are already dimmed?
+      fadeToBlackBy(leds, num_LEDs, LED_FADE_RATE);
+    }
 
 #ifdef DEBUG
     // debugging lights
@@ -88,6 +94,8 @@ void updateLights() {
     FastLED.show();
   }
 
-  // change g_hue every 3 frames
-  EVERY_N_MILLISECONDS(3 * 1000 / frames_per_second) { g_hue++; }
+  if (lightsOn) {
+    // change g_hue every 3 frames
+    EVERY_N_MILLISECONDS(3 * 1000 / frames_per_second) { g_hue++; }
+  }
 }

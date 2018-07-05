@@ -14,6 +14,7 @@
 #include <IniFile.h>
 #include <SD.h>
 #include <SPI.h>
+#include <RTCZero.h>
 
 #include "types.h"
 
@@ -28,6 +29,7 @@
 #define VS1053_DREQ 11 // VS1053 Data request, ideally an Interrupt pin
 #define LED_DATA 12    // TODO: what pin?
 #define RED_LED 13     // already wired for us
+#define START_PIN 14  // TODO: what pin?
 #define SPI_MISO 22
 #define SPI_MOSI 23
 #define SPI_SCK 24
@@ -36,8 +38,13 @@
 const int num_LEDs = 16;
 CRGB leds[num_LEDs];
 
+// TODO: put on SD?
+#define LED_FADE_RATE 90
+
 Adafruit_VS1053_FilePlayer musicPlayer =
     Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, VS1053_DREQ, SDCARD_CS);
+
+RTCZero rtc;
 
 // rotating "base color" used by some patterns
 uint8_t g_hue = 0;
@@ -62,7 +69,7 @@ Playlist playlists[NUM_PLAYLISTS];
 
 // these are set by config or fallback to defaults
 // TODO: making this unsigned makes IniConfig sad. they shouldn't ever be negative though!
-int default_brightness, frames_per_second;
+int default_brightness, frames_per_second, alarm_hours, alarm_minutes, alarm_seconds;
 
 void setup() {
   // if you're using Bluefruit or LoRa/RFM Feather, disable the BLE interface
@@ -78,6 +85,10 @@ void setup() {
 #endif
 
   DEBUG_PRINTLN(F("Setting up..."));
+
+  // for night sounds, this is a button
+  // for motion activated, this is a pir sensor
+  pinMode(START_PIN, INPUT);
 
   if (!musicPlayer.begin()) { // initialise the music player
     DEBUG_PRINTLN(F("Couldn't find VS1053, do you have the right pins defined?"));
@@ -106,6 +117,11 @@ void setup() {
   musicPlayer.sineTest(0x44, 500); // Make a tone for 500ms to indicate VS1053 is working
 
   loadPlaylists();
+
+  if (alarm_hours or alarm_minutes or alarm_seconds) {
+    rtc.begin();
+
+  }
 
   DEBUG_PRINTLN(F("Starting..."));
 }
@@ -153,38 +169,92 @@ EDB db(&writer, &reader);
 #ifdef MOTION_ACTIVATED
 
 // loop for motion activated sounds for a adopted porta potty
+// TODO: this plays a whole song before turning off. should we tie it more to the PIR?
 void loop() {
-  while (musicPlayer.stopped()) {
-    // TODO: wait for PIR sensor, then playTrackFromPlaylist(PLAYLIST_MUSIC)
+  static bool lightsOn = false;
 
-    playTrackFromPlaylist(playlists[PLAYLIST_MUSIC]);
+  if (musicPlayer.stopped()) {
+    // sleep waiting for START_PIN to go HIGH?
+    if (digitalRead(START_PIN) == HIGH) {
+      // motion detected!
+      lightsOn = true;
+
+      // start the next song
+      playTrackFromPlaylist(playlists[PLAYLIST_MUSIC]);
+    } else {
+      // no motion, turn off the lights
+      // TODO: should we do some sort of low power mode after a couple seconds?
+      lightsOn = false;
+    }
   }
 
-  updateLights();
+  updateLights(lightsOn);
   FastLED.delay(1000 / frames_per_second);
 }
 
 #else
 
+    // TODO: turn lights off if no music is playing
+    // TODO: turn lights off if configured to only be on for X minutes (lights to get to bed vs nightlight-mode)
+
+bool g_music_on = true;
+bool g_lights_on = false;
+
+// TODO: use rtc for turning off lights/music after a set amount of time?
+
+void alarmMatch() {
+  g_music_on = false;
+}
+
 // loop for night sounds
 void loop() {
-  // TODO: wait for a button press to start?
+  // TODO: wait for a button press to start? then (if config has a time for lights, turn lights on)
+  // TODO: how should we turn lights off after a timer expires?
 
-  playTrackFromPlaylist(playlists[PLAYLIST_SPOKEN_WORD]);
-  while (!musicPlayer.stopped()) {
-    updateLights();
+  // wait for a button to be pressed
+  // TODO: use bounce library instead of simple digitalRead?
+  while (musicPlayer.stopped()) {
+    // sleep waiting for START_PIN to go HIGH?
+    if (digitalRead(START_PIN) == HIGH) {
+      g_lights_on = true;   // TODO: make lights optional
+      g_music_on = true;
+      playTrackFromPlaylist(playlists[PLAYLIST_SPOKEN_WORD]);
+      break;
+    }
+
+    updateLights(g_lights_on);
     FastLED.delay(1000 / frames_per_second);
   }
 
+  // wait for the meditation track to finish
+  while (!musicPlayer.stopped()) {
+    updateLights(g_lights_on);
+    FastLED.delay(1000 / frames_per_second);
+  }
+
+  // set timer for night sounds now that the meditation is over
+  if (alarm_hours or alarm_minutes or alarm_seconds) {
+    rtc.setTime(0, 0, 0);
+    rtc.setAlarmTime(alarm_hours, alarm_minutes, alarm_seconds);
+    rtc.enableAlarm(rtc.MATCH_HHMMSS);
+    rtc.attachInterrupt(alarmMatch);
+  }
+
+  // loop night sounds
   while (true) {
+    // the rtc will disable g_music_on if alarms are configured. otherwise night sounds will play until button is pressed
+    // TODO: use bounce library instead of simple digitalRead?
+    if (!g_music_on or digitalRead(START_PIN) == HIGH) {
+      musicPlayer.stopPlaying();
+      break;
+    }
+
     playTrackFromPlaylist(playlists[PLAYLIST_NIGHT_SOUNDS]);
 
-    updateLights();
-    // NOTE! this is 100, not 1000 so that there is less delay when it loops
+    updateLights(g_lights_on);
+    // NOTE! this is 100, not 1000 so that there is less audio delay when it loops
     // TODO: check if this is really necessary
     FastLED.delay(100 / frames_per_second);
-
-    // TODO: only play for X hours, then wait for a button press to start the loop again
   }
 }
 

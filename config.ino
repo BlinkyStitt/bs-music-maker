@@ -67,18 +67,49 @@ void setupConfig() {
     } else {
       ini.getValue("global", "default_brightness", buffer, buffer_len, default_brightness);
       ini.getValue("global", "frames_per_second", buffer, buffer_len, frames_per_second);
+      ini.getValue("global", "alarm_hours", buffer, buffer_len, alarm_hours);
+      ini.getValue("global", "alarm_minutes", buffer, buffer_len, alarm_minutes);
+      ini.getValue("global", "alarm_seconds", buffer, buffer_len, alarm_seconds);
     }
 
     ini.close();
   }
 
+  DEBUG_PRINT(F("default_brightness: "));
+  if (!default_brightness) {
+    DEBUG_PRINT(F("(default) "));
+    default_brightness = 30; // TODO: tune this
+  }
+  DEBUG_PRINTLN(default_brightness);
+
   DEBUG_PRINT(F("frames_per_second: "));
   if (!frames_per_second) {
     DEBUG_PRINT(F("(default) "));
-    frames_per_second = 30; // TODO: 60?
+    frames_per_second = 60;
   }
   DEBUG_PRINTLN(frames_per_second);
 
   DEBUG_PRINT(F("goal milliseconds per frame: "));
   DEBUG_PRINTLN2(1000.0 / frames_per_second, 2);
+
+  DEBUG_PRINT(F("alarm_hours: "));
+  if (!alarm_hours) {
+    DEBUG_PRINT(F("(default) "));
+    alarm_hours = 2;
+  }
+  DEBUG_PRINTLN(alarm_hours);
+
+  DEBUG_PRINT(F("alarm_minutes: "));
+  if (!alarm_minutes) {
+    DEBUG_PRINT(F("(default) "));
+    alarm_minutes = 0;
+  }
+  DEBUG_PRINTLN(alarm_minutes);
+
+  DEBUG_PRINT(F("alarm_seconds: "));
+  if (!alarm_seconds) {
+    DEBUG_PRINT(F("(default) "));
+    alarm_seconds = 0;
+  }
+  DEBUG_PRINTLN(alarm_seconds);
 }
