@@ -88,6 +88,12 @@ void loadTracks(Playlist& playlist) {
 
   DEBUG_PRINT(F("num_tracks: "));
   DEBUG_PRINTLN(playlist.num_tracks);
+
+  if (!playlist.num_tracks) {
+    DEBUG_PRINTLN("No tracks loaded!");
+    while(1)
+      ;
+  }
 }
 
 void loadPlaylists() {
@@ -135,7 +141,11 @@ void playTrackFromPlaylist(Playlist& playlist) {
 
   const int track_id = playlist.next_track;
 
+  updateLights(g_lights_on);
+
   openDatabase();
+
+  updateLights(g_lights_on);
 
   // prepare the next track if we have played this one enough times
   playlist.play_count++;
@@ -159,7 +169,11 @@ void playTrackFromPlaylist(Playlist& playlist) {
   EDB_Status result = db.updateRec(playlist.database_id, EDB_REC playlist_data_buffer);
   // TODO: make sure update worked
 
+  updateLights(g_lights_on);
+
   closeDatabase();
+
+  updateLights(g_lights_on);
 
   char full_path[27];  // TODO: how long? /12/8.3 = 27 (include null terminator?)
 
@@ -172,12 +186,15 @@ void playTrackFromPlaylist(Playlist& playlist) {
   DEBUG_PRINT(F(" "));
   DEBUG_PRINTLN(full_path);
 
+  updateLights(g_lights_on);
+
   // Start playing the file. This sketch continues to run while the file plays.
   musicPlayer.startPlayingFile(full_path);
 
+  updateLights(g_lights_on);
+
   // A brief delay for the library to read file info
-  //FastLED.delay(5);
-  delay(5);  // TODO: put this back to lights
+  FastLED.delay(5);
 
   // TODO: if it isn't playing, return false so we can log and then retry or something
   if (musicPlayer.stopped()) {

@@ -19,15 +19,15 @@ void setupLights() {
   DEBUG_PRINTLN("done.");
 }
 
-void updateLights(bool& lightsOn) {
+void updateLights(bool& lights_on) {
 #ifdef DEBUG
   static unsigned long last_frame = 0;
 #endif
 
   // update the led array every frame
   EVERY_N_MILLISECONDS(1000 / frames_per_second) {
-    if (lightsOn) {
-      // TODO: if not motion activated and config has a time limit for lights, set lightsOn = false
+    if (lights_on) {
+      // TODO: if not motion activated and config has a time limit for lights, set lights_on = false
 
       pride();
     } else {
@@ -64,6 +64,9 @@ void updateLights(bool& lightsOn) {
     DEBUG_PRINT(F(" | Motion="));
     DEBUG_PRINT(digitalRead(START_PIN));
 
+    DEBUG_PRINT(F(" | Stopped="));
+    DEBUG_PRINT(musicPlayer.stopped());
+
     DEBUG_PRINT(F(" | ms since last frame="));
     DEBUG_PRINTLN(millis() - last_frame);
 
@@ -74,7 +77,7 @@ void updateLights(bool& lightsOn) {
     FastLED.show();
   }
 
-  if (lightsOn) {
+  if (lights_on) {
     // change g_hue every 3 frames
     EVERY_N_MILLISECONDS(3 * 1000 / frames_per_second) { g_hue++; }
   }

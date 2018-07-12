@@ -181,6 +181,8 @@ EDB db(&writer, &reader);
  * END things that should be moved into their own ino files
  */
 
+bool g_lights_on = false;
+
 #ifdef MOTION_ACTIVATED
 
 // run when START_PIN is RISING
@@ -192,35 +194,35 @@ void playMotionActivated() {
 // loop for motion activated sounds for a adopted porta potty
 // TODO: this plays a whole song before turning off. should we tie it more to the PIR?
 void loop() {
-  static bool lightsOn = false;
   static int off_frames = 0;
   static const int sleep_frames = 10 * 1000 / (1000 / frames_per_second); // give the lights enough frames to fade to black before sleeping
   static const int loop_delay = 1000 / frames_per_second;  // TODO: sleep less? 100/fps?
 
-  updateLights(lightsOn);
+  updateLights(g_lights_on);
 
   if (musicPlayer.stopped()) {
-    if (digitalRead(START_PIN) == HIGH) {
+    // TODO: pir sensor and music wing don't get along. https://forums.adafruit.com/viewtopic.php?f=19&t=138121
+    if (true or digitalRead(START_PIN) == HIGH) {
       // there is still motion. start a new song and stay on
       DEBUG_PRINTLN("Motion detected!");
       playMotionActivated();
-      lightsOn = true;
+      g_lights_on = true;
       off_frames = 0;
     } else {
       // music has ended had there is no motion. turn off
-      lightsOn = false;
+      g_lights_on = false;
       off_frames++;  // todo: use millis instead
 
       if (off_frames >= sleep_frames) {
         sleep();
 
         playMotionActivated();
-        lightsOn = true;
+        g_lights_on = true;
         off_frames = 0;
       }
     }
   } else {
-    lightsOn = true;
+    g_lights_on = true;
     off_frames = 0;
   }
 
@@ -230,7 +232,6 @@ void loop() {
 #else  // !MOTION_ACTIVATED
 
 volatile bool g_music_on = true;
-bool g_lights_on = false;
 
 // use rtc for turning off lights/music after a set amount of time?
 void alarmMatch() {
