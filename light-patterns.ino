@@ -1,5 +1,5 @@
 /* light patterns */
-// TODO: write more patterns
+// TODO: write more patterns and make sure they only use 1/2 the lights. we can't lite 60 without flickering
 
 // This function draws rainbows with an ever-changing, widely-varying set of parameters.
 // https://gist.github.com/kriegsman/964de772d64c502760e5

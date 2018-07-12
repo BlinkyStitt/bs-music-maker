@@ -7,7 +7,7 @@ void setupLights() {
   // "While you can get 500mA from it, you can't do it continuously from 5V as
   // it will overheat the regulator."
   // TODO: tune this
-  FastLED.setMaxPowerInVoltsAndMilliamps(3.3, 400);
+  FastLED.setMaxPowerInVoltsAndMilliamps(3.3, 300);
 
   // TODO: something is wrong about this. i'm getting SPI errors
   FastLED.addLeds<LED_CHIPSET, LED_DATA>(leds, num_LEDs).setCorrection(TypicalSMD5050);
@@ -62,10 +62,16 @@ void updateLights(bool& lights_on) {
     }
 
     DEBUG_PRINT(F(" | Motion="));
-    DEBUG_PRINT(digitalRead(START_PIN));
+    if (digitalRead(START_PIN)) {
+      DEBUG_PRINT(1);
+      digitalWrite(RED_LED, HIGH);
+    } else {
+      DEBUG_PRINT(0);
+      digitalWrite(RED_LED, LOW);
+    }
 
-    DEBUG_PRINT(F(" | Stopped="));
-    DEBUG_PRINT(musicPlayer.stopped());
+    DEBUG_PRINT(F(" | Playing="));
+    DEBUG_PRINT(!musicPlayer.stopped());
 
     DEBUG_PRINT(F(" | ms since last frame="));
     DEBUG_PRINTLN(millis() - last_frame);
