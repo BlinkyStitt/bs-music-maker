@@ -1,9 +1,10 @@
+// TODO: db writes don't seem to be happening. the database is an empty file
 
 void createTable() {
-  DEBUG_PRINT("Creating table... ");
+  DEBUG_PRINT(F("Creating table... "));
   // create table starting at address 0
   db.create(0, TABLE_SIZE, (unsigned int)sizeof(PlaylistData));
-  DEBUG_PRINTLN("DONE");
+  DEBUG_PRINTLN(F("DONE"));
 }
 
 void setupDatabase() {
@@ -18,19 +19,19 @@ void setupDatabase() {
     }
 
     if (db_file) {
-      DEBUG_PRINT("Opening current table... ");
+      DEBUG_PRINT(F("Opening current table... "));
       EDB_Status result = db.open(0);
       if (result == EDB_OK) {
-        DEBUG_PRINTLN("DONE");
+        DEBUG_PRINTLN(F("DONE"));
       } else {
-        DEBUG_PRINTLN("ERROR");
-        DEBUG_PRINT("Did not find database in the file ");
+        DEBUG_PRINTLN(F("ERROR"));
+        DEBUG_PRINT(F("Did not find database in the file "));
         DEBUG_PRINTLN(db_name);
 
         createTable();
       }
     } else {
-      DEBUG_PRINT("Could not open file ");
+      DEBUG_PRINT(F("Could not open file "));
       DEBUG_PRINTLN(db_name);
       // TODO: loop here since we can't proceed?
       return;

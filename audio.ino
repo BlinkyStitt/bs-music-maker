@@ -1,19 +1,26 @@
 
-bool is_audio(String filename) {
+inline bool is_hidden(String filename) {
   // TODO: there are more supported formats.
+  return filename.startsWith(F("_"));
+}
+
+inline bool is_audio(String filename) {
+  // TODO: there are more supported formats.
+  if (is_hidden(filename)) {
+    return false;
+  }
+
   return filename.endsWith(F(".MP3")) or filename.endsWith(F(".AAC")) or filename.endsWith(F(".MP4")) or
          filename.endsWith(F(".M4A")) or filename.endsWith(F(".WAV"));
 }
 
-void loadTracks(char* dir, Playlist& playlist) {
-  static File root;
-
+void loadTracks(Playlist& playlist) {
   // TODO: make sure the database is open
 
   // Starting to index the SD card for MP3/AAC.
   DEBUG_PRINT(F("Loading tracks from "));
-  DEBUG_PRINTLN(dir);
-  root = SD.open(dir);
+  DEBUG_PRINTLN(playlist.directory);
+  File root = SD.open(playlist.directory);
 
   while (true) {
     File file = root.openNextFile();
@@ -21,13 +28,11 @@ void loadTracks(char* dir, Playlist& playlist) {
       // If no more files, break out.
       break;
     }
-    String file_string = file.name(); // put file in string
-
-    DEBUG_PRINT(F("Found: "));
-    DEBUG_PRINT(file_string);
+    String file_string = file.name(); // strings have some nice convenience methods
 
     if (!is_audio(file_string)) {
-      DEBUG_PRINTLN(F(" (Skipped)"));
+      DEBUG_PRINT(F("Skipped "));
+      DEBUG_PRINTLN(file_string);
 
       file.close();
       continue;
@@ -38,10 +43,11 @@ void loadTracks(char* dir, Playlist& playlist) {
 
     file.close();
 
-    DEBUG_PRINT(F("Saved to track list as: #"));
+    DEBUG_PRINT(F("Saved "));
+    DEBUG_PRINT(playlist.tracks[playlist.num_tracks].filename);
+    DEBUG_PRINT(F(" to track list as: #"));
     DEBUG_PRINT(playlist.num_tracks);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINTLN(playlist.tracks[playlist.num_tracks].filename);
+    DEBUG_PRINTLN();
 
     playlist.num_tracks++;
   }
@@ -93,15 +99,24 @@ void loadPlaylists() {
 #ifdef MOTION_ACTIVATED
   playlists[PLAYLIST_MUSIC].database_id = PLAYLIST_MUSIC;
   playlists[PLAYLIST_MUSIC].repeat = 0;
-  loadTracks((char *)"/music", playlists[PLAYLIST_MUSIC]);
+
+  strcpy(playlists[PLAYLIST_MUSIC].directory, "/music");
+
+  loadTracks(playlists[PLAYLIST_MUSIC]);
 #else
   playlists[PLAYLIST_SPOKEN_WORD].database_id = PLAYLIST_SPOKEN_WORD;
   playlists[PLAYLIST_SPOKEN_WORD].repeat = 7;
-  loadTracks((char *)"/words", playlists[PLAYLIST_SPOKEN_WORD]);
+
+  strcpy(playlists[PLAYLIST_SPOKEN_WORD].directory, "/words");
+
+  loadTracks(playlists[PLAYLIST_SPOKEN_WORD]);
 
   playlists[PLAYLIST_NIGHT_SOUNDS].database_id = PLAYLIST_NIGHT_SOUNDS;
   playlists[PLAYLIST_NIGHT_SOUNDS].repeat = 3;
-  loadTracks((char *)"/sounds", playlists[PLAYLIST_NIGHT_SOUNDS]);
+
+  strcpy(playlists[PLAYLIST_NIGHT_SOUNDS].directory, "/sounds");
+
+  loadTracks(playlists[PLAYLIST_NIGHT_SOUNDS]);
 #endif
 
   closeDatabase();
@@ -146,16 +161,26 @@ void playTrackFromPlaylist(Playlist& playlist) {
 
   closeDatabase();
 
-  DEBUG_PRINT(F("Playing track: #"));
+  char full_path[27];  // TODO: how long? /12/8.3 = 27 (include null terminator?)
+
+  strcpy(full_path, playlist.directory);
+  strcat(full_path, "/");
+  strcat(full_path, playlist.tracks[track_id].filename);
+
+  DEBUG_PRINT(F("Playing track #"));
   DEBUG_PRINT(track_id);
   DEBUG_PRINT(F(" "));
-  DEBUG_PRINT(playlist.tracks[track_id].filename);
+  DEBUG_PRINTLN(full_path);
 
   // Start playing the file. This sketch continues to run while the file plays.
-  musicPlayer.startPlayingFile(playlist.tracks[track_id].filename);
+  musicPlayer.startPlayingFile(full_path);
 
   // A brief delay for the library to read file info
-  FastLED.delay(5);
+  //FastLED.delay(5);
+  delay(5);  // TODO: put this back to lights
 
   // TODO: if it isn't playing, return false so we can log and then retry or something
+  if (musicPlayer.stopped()) {
+    DEBUG_PRINTLN("ERROR PLAYING TRACK!");
+  }
 }

@@ -2,7 +2,7 @@
 #include <bs_debug.h>
 
 // TODO: comment this out for night sounds. uncomment this for motion activated player (wip)
-//#define MOTION_ACTIVATED
+#define MOTION_ACTIVATED
 
 // based on
 // https://github.com/adafruit/Adafruit_VS1053_Library/blob/master/examples/feather_player/feather_player.ino
@@ -21,25 +21,25 @@
 // These are the pins used
 #define VS1053_RESET -1 // VS1053 reset pin (not used!)
 
-#define SDCARD_CS 5   // Card chip select pin. already wired for us
-#define VS1053_CS 6   // VS1053 chip select pin (output)
-#define VBAT_PIN 9    // already wired for us  // A7
-#define VS1053_DCS 10 // VS1053 Data/command select pin (output)
+#define SDCARD_CS 5   // already wired for us. Card chip select pin. already wired for us
+#define VS1053_CS 6   // already wired for us. VS1053 chip select pin (output)
 // DREQ should be an Int pin *if possible* (not possible on 32u4)
-#define VS1053_DREQ 11 // VS1053 Data request, ideally an Interrupt pin
+// pin 9 is also used for checking voltage. i guess we can't do that anymore :(
+#define VS1053_DREQ 9 // already wired for us (but not marked on board). VS1053 Data request, ideally an Interrupt pin
+#define VS1053_DCS 10 // already wired for us. VS1053 Data/command select pin (output)
+#define START_PIN 11  // TODO: what pin?
 #define LED_DATA 12    // TODO: what pin?
 #define RED_LED 13     // already wired for us
-#define START_PIN 14  // TODO: what pin?
 #define SPI_MISO 22
 #define SPI_MOSI 23
 #define SPI_SCK 24
 
 #define LED_CHIPSET NEOPIXEL
-const int num_LEDs = 16;
+const int num_LEDs = 60;
 CRGB leds[num_LEDs];
 
 // TODO: put on SD?
-#define LED_FADE_RATE 90
+#define LED_FADE_RATE 100
 
 Adafruit_VS1053_FilePlayer musicPlayer =
     Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, VS1053_DREQ, SDCARD_CS);
@@ -65,6 +65,8 @@ uint8_t g_hue = 0;
 
 #endif  // MOTION_ACTIVATED
 
+PlaylistData playlist_data_buffer;
+
 Playlist playlists[NUM_PLAYLISTS];
 
 // these are set by config or fallback to defaults
@@ -82,12 +84,16 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect so we can watch all prints during setup
   }
+#else
+  delay(2000);
 #endif  // DEBUG
 
   DEBUG_PRINTLN(F("Setting up..."));
+  delay(4000);  // TODO: remove this once sleep code is well tested
 
   // for night sounds, this is a button
   // for motion activated, this is a pir sensor
+  // NOTE: pir sensor is NOT accurate until it has been plugged in for 20 seconds or so.
   pinMode(START_PIN, INPUT);
 
   if (!musicPlayer.begin()) { // initialise the music player
@@ -98,6 +104,7 @@ void setup() {
 
   DEBUG_PRINTLN(F("VS1053 found"));
 
+  // TODO: loop here and wait for the SD instead
   if (!SD.begin(SDCARD_CS)) {
     DEBUG_PRINTLN(F("SD failed, or not present"));
     while (1)
@@ -108,21 +115,22 @@ void setup() {
 
   setupConfig();
 
+  // TODO: re-enable this
   setupLights();
 
   // Set volume for left, right channels. lower numbers == louder volume!
   // TODO: config volume off SD card
-  musicPlayer.setVolume(10, 10);
+  // TODO: constrain 0-255
+  musicPlayer.setVolume(10, 0);
 
   musicPlayer.sineTest(0x44, 500); // Make a tone for 500ms to indicate VS1053 is working
 
+  musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
+
   loadPlaylists();
 
-// TODO: what is the right syntax for "if not defined"?
 #ifdef MOTION_ACTIVATED
-
   setupInterrupts();
-
 #else  // !MOTION_ACTIVATED
   if (alarm_hours or alarm_minutes or alarm_seconds) {
     rtc.attachInterrupt(alarmMatch);
@@ -131,7 +139,6 @@ void setup() {
 #endif // MOTION_ACTIVATED
 
   DEBUG_PRINTLN(F("Starting..."));
-  delay(10000);  // TODO: remove this once sleep code is well tested
 }
 
 /*
@@ -187,7 +194,10 @@ void playMotionActivated() {
 void loop() {
   static bool lightsOn = false;
   static int off_frames = 0;
-  static const int sleep_frames = 10; // give the lights enough frames to fade to black before sleeping
+  static const int sleep_frames = 10 * 1000 / (1000 / frames_per_second); // give the lights enough frames to fade to black before sleeping
+  static const int loop_delay = 1000 / frames_per_second;  // TODO: sleep less? 100/fps?
+
+  updateLights(lightsOn);
 
   if (musicPlayer.stopped()) {
     if (digitalRead(START_PIN) == HIGH) {
@@ -199,7 +209,7 @@ void loop() {
     } else {
       // music has ended had there is no motion. turn off
       lightsOn = false;
-      off_frames++;
+      off_frames++;  // todo: use millis instead
 
       if (off_frames >= sleep_frames) {
         sleep();
@@ -214,8 +224,7 @@ void loop() {
     off_frames = 0;
   }
 
-  updateLights(lightsOn);
-  FastLED.delay(1000 / frames_per_second);
+  FastLED.delay(loop_delay);
 }
 
 #else  // !MOTION_ACTIVATED
@@ -240,8 +249,10 @@ void loop() {
 
   // wait for the meditation track to finish
   while (!musicPlayer.stopped()) {
-    updateLights(g_lights_on);
-    FastLED.delay(1000 / frames_per_second);
+    // TODO: re-enable once other things are working
+    //updateLights(g_lights_on);
+    //FastLED.delay(1000 / frames_per_second);
+    delay(1000 / frames_per_second);
   }
 
   // set timer for night sounds to turn off now that the meditation is over
@@ -262,7 +273,7 @@ void loop() {
 
     playTrackFromPlaylist(playlists[PLAYLIST_NIGHT_SOUNDS]);
 
-    updateLights(g_lights_on);
+    //updateLights(g_lights_on);
     // NOTE! this is 100, not 1000 so that there is less audio delay when it loops
     // TODO: check if this is really necessary
     FastLED.delay(100 / frames_per_second);

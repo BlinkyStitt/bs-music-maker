@@ -55,11 +55,11 @@ void setupConfig() {
   // create this even if sd isn't setup so that the if/else below is simpler
   IniFile ini(filename);
 
-  DEBUG_PRINTLN(F("Loading config... "));
-
   if (!ini.open()) {
-    DEBUG_PRINTLN(F("does not exist. Cannot proceed with config!"));
+    DEBUG_PRINTLN(F("Config does not exist."));
   } else {
+    DEBUG_PRINTLN(F("Loading config... "));
+
     if (!ini.validate(buffer, buffer_len)) {
       DEBUG_PRINT(ini.getFilename());
       DEBUG_PRINT(F("not valid. Cannot proceed with config!"));
@@ -78,14 +78,14 @@ void setupConfig() {
   DEBUG_PRINT(F("default_brightness: "));
   if (!default_brightness) {
     DEBUG_PRINT(F("(default) "));
-    default_brightness = 30; // TODO: tune this
+    default_brightness = 128; // TODO: tune this
   }
   DEBUG_PRINTLN(default_brightness);
 
   DEBUG_PRINT(F("frames_per_second: "));
   if (!frames_per_second) {
     DEBUG_PRINT(F("(default) "));
-    frames_per_second = 60;
+    frames_per_second = 60; // todo: this ends up being 50
   }
   DEBUG_PRINTLN(frames_per_second);
 

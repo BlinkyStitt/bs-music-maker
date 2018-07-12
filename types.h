@@ -12,6 +12,8 @@ typedef struct {
   int repeat = 0;
   unsigned int database_id = 0;
 
+  char directory[13];
+
   int num_tracks = 0;
   Track tracks[MAX_PLAYLIST_TRACKS];
 
@@ -25,4 +27,3 @@ typedef struct PlaylistData {
   int next_track;
   int play_count;
 };
-PlaylistData playlist_data_buffer;
