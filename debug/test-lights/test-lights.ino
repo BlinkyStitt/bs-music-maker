@@ -9,15 +9,15 @@
 
 #define VS1053_RESET -1 // VS1053 reset pin (not used!)
 
-#define SDCARD_CS 5   // already wired for us. Card chip select pin. already wired for us
-#define VS1053_CS 6   // already wired for us. VS1053 chip select pin (output)
+#define SDCARD_CS 5 // already wired for us. Card chip select pin. already wired for us
+#define VS1053_CS 6 // already wired for us. VS1053 chip select pin (output)
 // DREQ should be an Int pin *if possible* (not possible on 32u4)
 // pin 9 is also used for checking voltage. i guess we can't do that anymore :(
 #define VS1053_DREQ 9 // already wired for us (but not marked on board). VS1053 Data request, ideally an Interrupt pin
 #define VS1053_DCS 10 // already wired for us. VS1053 Data/command select pin (output)
 #define START_PIN 11  // TODO: what pin?
-#define LED_DATA 12    // TODO: what pin?
-#define RED_LED 13     // already wired for us
+#define LED_DATA 12   // TODO: what pin?
+#define RED_LED 13    // already wired for us
 #define SPI_MISO 22
 #define SPI_MOSI 23
 #define SPI_SCK 24
@@ -72,10 +72,10 @@ void setup() {
   }
 #else  // no DEBUG_SERIAL_WAIT
   delay(5000); // todo: tune this. don't get locked out if something crashes
-#endif  // DEBUG_SERIAL_WAIT
+#endif // DEBUG_SERIAL_WAIT
 #else  // no DEBUG
   delay(5000); // todo: tune this. don't get locked out if something crashes
-#endif  // DEBUG
+#endif // DEBUG
 
   DEBUG_PRINTLN(F("Setting up..."));
 

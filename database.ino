@@ -9,7 +9,8 @@ void createTable() {
 
 void setupDatabase() {
   // open database if it exists, create database if it doesn't
-  if (SD.exists(db_name)) {
+  // TODO: remove false since it resets the db every run
+  if (false and SD.exists(db_name)) {
     db_file = SD.open(db_name, FILE_WRITE);
 
     // Sometimes it wont open at first attempt, especially after cold start
@@ -20,7 +21,7 @@ void setupDatabase() {
 
     if (db_file) {
       DEBUG_PRINT(F("Opening current table... "));
-      EDB_Status result = db.open(0);
+      EDB_Status result = db.open(1);
       if (result == EDB_OK) {
         DEBUG_PRINTLN(F("DONE"));
       } else {
@@ -49,9 +50,12 @@ void setupDatabase() {
 }
 
 bool openDatabase() {
+  DEBUG_PRINT("Opening database... ");
+
   db_file = SD.open(db_name, FILE_WRITE);
 
   if (db_file) {
+    DEBUG_PRINTLN("DONE.");
     return true;
   } else {
     DEBUG_PRINT("Could not open file ");
@@ -60,7 +64,11 @@ bool openDatabase() {
   }
 }
 
-void closeDatabase() { db_file.close(); }
+void closeDatabase() {
+  DEBUG_PRINT("Closing database...");
+  db_file.close();
+  DEBUG_PRINTLN("DONE.");
+}
 
 // utility functions
 

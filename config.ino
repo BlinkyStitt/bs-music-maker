@@ -78,14 +78,14 @@ void setupConfig() {
   DEBUG_PRINT(F("default_brightness: "));
   if (!default_brightness) {
     DEBUG_PRINT(F("(default) "));
-    default_brightness = 64; // TODO: tune this
+    default_brightness = 200; // TODO: tune this
   }
   DEBUG_PRINTLN(default_brightness);
 
   DEBUG_PRINT(F("frames_per_second: "));
   if (!frames_per_second) {
     DEBUG_PRINT(F("(default) "));
-    frames_per_second = 60; // todo: this ends up being 50
+    frames_per_second = 50;
   }
   DEBUG_PRINTLN(frames_per_second);
 

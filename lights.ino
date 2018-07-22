@@ -19,7 +19,7 @@ void setupLights() {
   DEBUG_PRINTLN("done.");
 }
 
-void updateLights(bool& lights_on) {
+void updateLights(bool &lights_on) {
 #ifdef DEBUG
   static unsigned long last_frame = 0;
 #endif
@@ -29,10 +29,10 @@ void updateLights(bool& lights_on) {
     if (lights_on) {
       // TODO: if not motion activated and config has a time limit for lights, set lights_on = false
 
-      pride();
+      chasingRainbow();
     } else {
       // TODO: is this fast if all the lights are already dimmed?
-      fadeToBlackBy(leds, num_LEDs, LED_FADE_RATE);
+      fadeToBlackBy(leds, num_LEDs, 96);
     }
 
 #ifdef DEBUG
@@ -70,8 +70,8 @@ void updateLights(bool& lights_on) {
       digitalWrite(RED_LED, LOW);
     }
 
-    DEBUG_PRINT(F(" | Playing="));
-    DEBUG_PRINT(!musicPlayer.stopped());
+    DEBUG_PRINT(F(" | Music Stopped="));
+    DEBUG_PRINT(g_music_stopped);
 
     DEBUG_PRINT(F(" | ms since last frame="));
     DEBUG_PRINTLN(millis() - last_frame);
@@ -81,10 +81,5 @@ void updateLights(bool& lights_on) {
 
     // display the colors
     FastLED.show();
-  }
-
-  if (lights_on) {
-    // change g_hue every 3 frames
-    EVERY_N_MILLISECONDS(3 * 1000 / frames_per_second) { g_hue++; }
   }
 }

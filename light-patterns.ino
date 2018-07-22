@@ -1,45 +1,26 @@
-/* light patterns */
-// TODO: write more patterns and make sure they only use 1/2 the lights. we can't lite 60 without flickering
+void chasingRainbow() {
+  static const unsigned int virtual_LEDs = num_LEDs * 4;  // show 1/4 of the rainbow
+  static const unsigned int ms_per_led = 3 * 1000 / frames_per_second;   // 4 frames
+  static int shift;
 
-// This function draws rainbows with an ever-changing, widely-varying set of parameters.
-// https://gist.github.com/kriegsman/964de772d64c502760e5
-void pride() {
-  static uint16_t sPseudotime = 0;
-  static uint16_t sLastMillis = 0;
-  static uint16_t sHue16 = 0;
+  static const unsigned int distance = 10;
 
-  // TODO: figure out what all these numbers do and make it look good on two concentric rings
-  uint8_t sat8 = beatsin88(87, 220, 250);
-  uint8_t brightdepth = beatsin88(341, 96, 224);
-  uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256));
-  uint8_t msmultiplier = beatsin88(147, 23, 60);
+  fadeToBlackBy(leds, num_LEDs, 96);
+  //fadeLightBy(leds, num_LEDs, 64);
 
-  uint16_t hue16 = sHue16; // g_hue * 256;
-  uint16_t hueinc16 = beatsin88(113, 1, 3000);
+  // shift the pattern slowly over time
+  shift = millis() / ms_per_led;
 
-  uint16_t ms = millis();
-  uint16_t deltams = ms - sLastMillis;
-  sLastMillis = ms;
-  sPseudotime += deltams * msmultiplier;
-  sHue16 += deltams * beatsin88(400, 5, 9);
-  uint16_t brightnesstheta16 = sPseudotime;
+  // i is our local ids for lights
+  for (int i = 0; i < num_LEDs; i++) {
+    int virtual_i = (i + shift) % virtual_LEDs;
 
-  for (uint16_t i = 0; i < num_LEDs; i++) {
-    hue16 += hueinc16;
-    uint8_t hue8 = hue16 / 256;
-
-    brightnesstheta16 += brightnessthetainc16;
-    uint16_t b16 = sin16(brightnesstheta16) + 32768;
-
-    uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
-    uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
-    bri8 += (255 - brightdepth);
-
-    CRGB newcolor = CHSV(hue8, sat8, bri8);
-
-    uint16_t pixelnumber = i;
-    pixelnumber = (num_LEDs - 1) - pixelnumber;
-
-    nblend(leds[pixelnumber], newcolor, 64);
+    // light up every Nth light. the others will fade
+    if (virtual_i % distance == 0) {
+      // TODO: use a color pallet?
+      // TODO: do something with saturation, too?
+      int color_value = map(virtual_i, 0, virtual_LEDs - 1, 0, 255);
+      leds[i] = CHSV(color_value, 230, 255);
+    }
   }
 }
