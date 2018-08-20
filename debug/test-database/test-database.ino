@@ -24,12 +24,12 @@
 #define TABLE_SIZE 8192
 
 // The number of demo records that should be created.  This should be less
-// than (TABLE_SIZE - sizeof(EDB_Header)) / sizeof(LogEvent).  If it is higher,
+// than (TABLE_SIZE - sizeof(EDB_Header)) / sizeof(logEvent).  If it is higher,
 // operations will return EDB_OUT_OF_RANGE for all records outside the usable range.
 #define RECORDS_TO_CREATE 10
 
 char *db_name = "/edb_test.db";
-File db_file;
+File my_file;
 
 // Arbitrary record definition for this table.
 // This should be modified to reflect your record needs.
@@ -42,16 +42,16 @@ struct LogEvent {
 // Also blinks the led while writing/reading
 inline void writer(unsigned long address, const byte *data, unsigned int recsize) {
   digitalWrite(RED_LED, HIGH);
-  db_file.seek(address);
-  db_file.write(data, recsize);
-  db_file.flush();
+  my_file.seek(address);
+  my_file.write(data, recsize);
+  my_file.flush();
   digitalWrite(RED_LED, LOW);
 }
 
 inline void reader(unsigned long address, byte *data, unsigned int recsize) {
   digitalWrite(RED_LED, HIGH);
-  db_file.seek(address);
-  db_file.read(data, recsize);
+  my_file.seek(address);
+  my_file.read(data, recsize);
   digitalWrite(RED_LED, LOW);
 }
 
@@ -61,9 +61,9 @@ EDB db(&writer, &reader);
 bool openDatabase() {
   DEBUG_PRINT("Opening database... ");
 
-  db_file = SD.open(db_name, FILE_WRITE);
+  my_file = SD.open(db_name, FILE_WRITE);
 
-  if (db_file) {
+  if (my_file) {
     DEBUG_PRINTLN("DONE.");
     return true;
   } else {
@@ -75,7 +75,7 @@ bool openDatabase() {
 
 void closeDatabase() {
   DEBUG_PRINT("Closing database...");
-  db_file.close();
+  my_file.close();
   DEBUG_PRINTLN("DONE.");
 }
 
@@ -96,15 +96,15 @@ void setup() {
   DEBUG_PRINTLN(F("Starting..."));
 
   if (SD.exists(db_name)) {
-    db_file = SD.open(db_name, FILE_WRITE);
+    my_file = SD.open(db_name, FILE_WRITE);
 
     // Sometimes it wont open at first attempt, especially after cold start
     // Let's try one more time
-    if (!db_file) {
-      db_file = SD.open(db_name, FILE_WRITE);
+    if (!my_file) {
+      my_file = SD.open(db_name, FILE_WRITE);
     }
 
-    if (db_file) {
+    if (my_file) {
       Serial.print("Opening current table... ");
       EDB_Status result = db.open(0);
       if (result == EDB_OK) {
@@ -124,7 +124,7 @@ void setup() {
   } else {
     Serial.print("Creating table... ");
     // create table at with starting address 0
-    db_file = SD.open(db_name, FILE_WRITE);
+    my_file = SD.open(db_name, FILE_WRITE);
     db.create(0, TABLE_SIZE, (unsigned int)sizeof(logEvent));
     Serial.println("DONE");
   }

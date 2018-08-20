@@ -20,7 +20,7 @@ int inputPin = START_PIN; // choose the input pin (for PIR sensor)
 int pirState = LOW;       // we start, assuming no motion detected
 
 /*
-Adafruit_VS1053_FilePlayer musicPlayer =
+Adafruit_VS1053_FilePlayer music_player =
     Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, VS1053_DREQ, SDCARD_CS);
 */
 
@@ -38,9 +38,9 @@ void setup() {
 
 /*
   // Set volume for left, right channels. lower numbers == louder volume!
-  musicPlayer.setVolume(20, 0);
-  musicPlayer.sineTest(0x44, 500); // Make a tone for 500ms to indicate VS1053 is working
-  musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
+  music_player.setVolume(20, 0);
+  music_player.sineTest(0x44, 500); // Make a tone for 500ms to indicate VS1053 is working
+  music_player.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
 */
 
   Serial.println("Starting...");

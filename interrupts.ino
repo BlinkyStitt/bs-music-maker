@@ -5,7 +5,10 @@ with help from:
 - https://github.com/cavemoa/Feather-M0-Adalogger/blob/master/SimpleSleepUSB/SimpleSleepUSB.ino#L36
 */
 
+#ifdef MOTION_ACTIVATED
+
 void setupInterrupts() {
+  // these interrupts are used for the motion sensor to wake us from sleep
   // Attach the interrupt and set the wake flag
   attachInterrupt(digitalPinToInterrupt(START_PIN), ISR, RISING);
 
@@ -20,14 +23,32 @@ void setupInterrupts() {
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 }
 
+#endif
+
+#ifdef NIGHT_SOUNDS
+
+// use rtc for turning off lights/music after a set amount of time
+void alarmMatch() { g_music_on = false; }
+
+void setupInterrupts() {
+  // these interrupts are used for the timer to stop playing music
+
+  if (alarm_hours or alarm_minutes or alarm_seconds) {
+    rtc.attachInterrupt(alarmMatch);
+    rtc.begin();
+  }
+}
+
+#endif
+
 void ISR() {
   // TODO: is there anything we actually want to do during the interrupt?
 }
 
 void sleep() {
-#ifdef DEBUG
   DEBUG_PRINTLN("Sleeping...");
 
+#ifdef DEBUG
   Serial.end();
   USBDevice.detach(); // Safely detach the USB prior to sleeping
 #endif

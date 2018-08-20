@@ -3,23 +3,29 @@
 void createTable() {
   DEBUG_PRINT(F("Creating table... "));
   // create table starting at address 0
-  db.create(0, TABLE_SIZE, (unsigned int)sizeof(PlaylistData));
+  db.create(0, TABLE_SIZE, (unsigned int)sizeof(playlist_data_buffer));
   DEBUG_PRINTLN(F("DONE"));
 }
 
 void setupDatabase() {
   // open database if it exists, create database if it doesn't
-  // TODO: remove false since it resets the db every run
-  if (false and SD.exists(db_name)) {
-    db_file = SD.open(db_name, FILE_WRITE);
+
+  // while debugging, nuke the database every time. TODO: remove this!
+  if (SD.exists(db_name)) {
+    DEBUG_PRINTLN("RESETTING DATABASE!");
+    SD.remove(db_name);
+  }
+
+  if (SD.exists(db_name)) {
+    my_file = SD.open(db_name, FILE_WRITE);
 
     // Sometimes it wont open at first attempt, especially after cold start
     // Let's try one more time
-    if (!db_file) {
-      db_file = SD.open(db_name, FILE_WRITE);
+    if (!my_file) {
+      my_file = SD.open(db_name, FILE_WRITE);
     }
 
-    if (db_file) {
+    if (my_file) {
       DEBUG_PRINT(F("Opening current table... "));
       EDB_Status result = db.open(1);
       if (result == EDB_OK) {
@@ -38,13 +44,10 @@ void setupDatabase() {
       return;
     }
   } else {
-    db_file = SD.open(db_name, FILE_WRITE);
+    my_file = SD.open(db_name, FILE_WRITE);
 
     createTable();
   }
-
-  recordLimit();
-  countRecords();
 
   closeDatabase();
 }
@@ -52,10 +55,16 @@ void setupDatabase() {
 bool openDatabase() {
   DEBUG_PRINT("Opening database... ");
 
-  db_file = SD.open(db_name, FILE_WRITE);
+  my_file = SD.open(db_name, FILE_WRITE);
 
-  if (db_file) {
+  if (my_file) {
     DEBUG_PRINTLN("DONE.");
+
+    // verbose debugging!
+    recordLimit();
+    countRecords();
+    //selectAll();
+
     return true;
   } else {
     DEBUG_PRINT("Could not open file ");
@@ -65,9 +74,16 @@ bool openDatabase() {
 }
 
 void closeDatabase() {
-  DEBUG_PRINT("Closing database...");
-  db_file.close();
+  DEBUG_PRINTLN("Closing database...");
+
+  // verbose debugging
+  recordLimit();
+  countRecords();
+  //selectAll();
+
+  my_file.close();
   DEBUG_PRINTLN("DONE.");
+
 }
 
 // utility functions
