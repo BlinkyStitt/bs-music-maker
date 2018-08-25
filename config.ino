@@ -112,4 +112,6 @@ void setupConfig() {
     alarm_seconds = 0;
   }
   DEBUG_PRINTLN(alarm_seconds);
+
+  config_setup = true;
 }

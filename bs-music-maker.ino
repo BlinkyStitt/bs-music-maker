@@ -7,9 +7,7 @@
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
 
-// TODO: pick one of these
 #define MOTION_ACTIVATED
-//#define NIGHT_SOUNDS
 
 #include <Arduino.h>
 #include <Adafruit_VS1053.h>
@@ -39,6 +37,7 @@
 #define SPI_SCK 24
 
 #define LED_CHIPSET NEOPIXEL
+
 const int num_LEDs = 60;
 CRGB leds[num_LEDs];
 
@@ -47,29 +46,17 @@ Adafruit_VS1053_FilePlayer music_player =
 
 RTCZero rtc;
 
-// quick and dirty way to define database ids
-#ifdef MOTION_ACTIVATED
+// TODO: increase this. dynamically allocate this?
+#define MAX_PLAYLIST_TRACKS 10
 
-#define PLAYLIST_MUSIC 1
+unsigned int g_num_tracks = 0;
+char g_tracks[MAX_PLAYLIST_TRACKS][13] = {{0}};  // 8.3\0
+unsigned int g_next_track = 0;
+File g_file;
+bool g_lights_on = false;
+bool g_music_stopped = true;
 
-#define NUM_PLAYLISTS 1
-
-#endif // MOTION_ACTIVATED
-
-#ifdef NIGHT_SOUNDS
-
-#define PLAYLIST_SPOKEN_WORD 1
-#define PLAYLIST_NIGHT_SOUNDS 2
-
-#define NUM_PLAYLISTS 2
-
-#endif // NIGHT_SOUNDS
-
-// TODO: initialize this?
-PlaylistData playlist_data_buffer;
-
-// TODO: i think this is wrong. i think i have to init this
-Playlist playlists[NUM_PLAYLISTS];
+bool sd_setup = false, config_setup = false;
 
 // these are set by config or fallback to defaults
 int default_brightness, frames_per_second, alarm_hours, alarm_minutes, alarm_seconds;
@@ -99,84 +86,31 @@ void setup() {
   }
   delay(150); // SD sometimes takes some time to wake up
   DEBUG_PRINTLN("SD OK!");
+  sd_setup = true;
 
   setupConfig();
 
-  setupLights();
+  //setupLights();
+
+  music_player.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
 
   // Set volume for left, right channels. lower numbers == louder volume!
   music_player.setVolume(0, 0);
 
-  music_player.sineTest(0x44, 500); // Make a tone for 500ms to indicate VS1053 is working
+  music_player.sineTest(0x44, 300); // Make a tone for 500ms to indicate VS1053 is working
 
-  music_player.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
+  delay(300);
 
-  //setupDatabase();
-
-  loadPlaylists();
+  loadTracks();
 
   setupInterrupts();
 
   DEBUG_PRINTLN(F("Starting..."));
 }
 
-/*
- * this stuff was in its own .ino files, but something was broken about it
- * i think i fixed it by moving the struct definitions to types.h, but I'm not sure how best to move my_file and db defs
- */
-
-#define TABLE_SIZE 4096
-
-// The max number of records that should be created = (TABLE_SIZE - sizeof(EDB_Header)) / sizeof(LogEvent).
-// If you try to insert more, operations will return EDB_OUT_OF_RANGE for all records outside the usable range.
-
-const char *db_name = "playlist.db";
-File my_file;
-
-// The read and write handlers for using the SD Library
-// Also blinks the led while writing/reading
-// database entries start at 1, but that's crazy
-inline void writer(unsigned long address, const byte *data, unsigned int recsize) {
-  digitalWrite(RED_LED, HIGH);
-
-  DEBUG_PRINT("Writing to database ");
-  DEBUG_PRINTLN(address);
-
-  my_file.seek(address);
-  my_file.write(data, recsize);
-  my_file.flush();
-
-  digitalWrite(RED_LED, LOW);
-}
-
-inline void reader(unsigned long address, byte *data, unsigned int recsize) {
-  digitalWrite(RED_LED, HIGH);
-
-  DEBUG_PRINT("Reading from database ");
-  DEBUG_PRINTLN(address);
-
-  my_file.seek(address);
-  my_file.read(data, recsize);
-
-  digitalWrite(RED_LED, LOW);
-}
-
-// Create an EDB object with the appropriate write and read handlers
-// NOTE! These handlers do NOT open or close the database file!
-EDB db(&writer, &reader);
-
-/*
- * END things that should be moved into their own ino files
- */
-
-bool g_lights_on = false;
-bool g_music_stopped = true;
-
-#ifdef MOTION_ACTIVATED
-
 // run when START_PIN is RISING
 void playMotionActivated() {
-  //playTrackFromPlaylist(&playlists[PLAYLIST_MUSIC]);
+  playTrack();
 }
 
 // loop for motion activated sounds for a adopted porta potty
@@ -189,22 +123,21 @@ void loop() {
 
   static const int loop_delay = 100 / frames_per_second;
 
-  updateLights(g_lights_on);
+  updateLights();
 
   // checking music player is slow so only do it every second. this means there might be a small gap in playback, but lights will stay on
   EVERY_N_MILLISECONDS(1000 / frames_per_second) {
     g_music_stopped = music_player.stopped();
   }
 
-  EVERY_N_MILLISECONDS(1000) {
-    printPlaylist(&playlists[PLAYLIST_MUSIC]);
-  }
+  // TODO: if last motion was 2 minutes ago, stop the music player
 
   if (g_music_stopped) {
     // TODO: this is simply flapping on and off... test-motion-sensor doesn't have this behavior. wtf is going on!
     // apparently our PIR is sensitive to interference. often this is radio, but our amp causing the same issues.
     // AM312 PIR is less sensitive
-    if (true or digitalRead(START_PIN) == HIGH) {
+    // TODO: it appears to be getting stuck playing music...
+    if (digitalRead(START_PIN) == HIGH) {
       // there is still motion. start a new song and stay on
       DEBUG_PRINTLN(F("Motion detected!"));
       playMotionActivated();
@@ -216,9 +149,19 @@ void loop() {
       off_frames++;
 
       if (off_frames >= sleep_frames) {
-        sleep();
+        DEBUG_PRINTLN(F("Sleeping... (Serial will disconnect)"));
+
+        /*
+        // quick and dirty sleep code
+        while (digitalRead(START_PIN) == LOW) {
+          delay(250);
+        }
+        */
+        // TODO: turn this back on once the rest of the code is more solid. since this kills usb serial which is helpful for debugging
+        sleep();  // START_PIN going HIGH will wake us up
 
         playMotionActivated();
+        g_music_stopped = music_player.stopped();
         g_lights_on = true;
         off_frames = 0;
       }
@@ -230,54 +173,3 @@ void loop() {
 
   FastLED.delay(loop_delay);
 }
-
-#endif
-
-#ifdef NIGHT_SOUNDS
-
-// volatile because an interrupt can change it
-volatile bool g_music_on = true;
-
-// loop for night sounds
-void loop() {
-  // notice that this is 100 and not 1000. this keeps us from having an audible gap
-  static const int loop_delay = 100 / frames_per_second;
-
-  // sleep to save power. waiting for button press (START_PIN to be RISING)
-  sleep();
-
-  // button was pressed! start the show
-  g_lights_on = true;
-  g_music_on = true;
-  playTrackFromPlaylist(&playlists[PLAYLIST_SPOKEN_WORD]);
-
-  // wait for the meditation track to finish
-  while (!music_player.stopped()) {
-     updateLights(g_lights_on);
-     FastLED.delay(loop_delay);
-  }
-
-  // optionally set timer for night sounds to turn off now that the meditation is over
-  if (alarm_hours or alarm_minutes or alarm_seconds) {
-    rtc.setTime(0, 0, 0);   // we don't need a real time; we just use this as a timer
-    rtc.setAlarmTime(alarm_hours, alarm_minutes, alarm_seconds);
-    rtc.enableAlarm(rtc.MATCH_HHMMSS);
-  }
-
-  // loop night sounds
-  while (true) {
-    // the rtc will disable g_music_on if alarms are configured.
-    // otherwise night sounds will play until button is pressed // TODO: use bounce library here?
-    if (!g_music_on or digitalRead(START_PIN) == HIGH) {
-      music_player.stopPlaying();
-      break;
-    }
-
-    playTrackFromPlaylist(&playlists[PLAYLIST_NIGHT_SOUNDS]);
-
-    updateLights(g_lights_on);
-    FastLED.delay(loop_delay);
-  }
-}
-
-#endif // NIGHT_SOUNDS

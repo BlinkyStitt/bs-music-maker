@@ -53,7 +53,7 @@ void sleep() {
   USBDevice.detach(); // Safely detach the USB prior to sleeping
 #endif
 
-  // Enter sleep mode. this should save us power
+  // Enter sleep mode. this should save us power (power drops to 90mA which is still higher than expected
   __WFI(); // Wait for interrupt
 
   // we are awake!
