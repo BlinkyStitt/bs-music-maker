@@ -12,7 +12,7 @@ void setupDatabase() {
 
   // while debugging, nuke the database every time. TODO: remove this!
   if (SD.exists(db_name)) {
-    DEBUG_PRINTLN("RESETTING DATABASE!");
+    DEBUG_PRINTLN(F("RESETTING DATABASE!"));
     SD.remove(db_name);
   }
 
@@ -53,12 +53,12 @@ void setupDatabase() {
 }
 
 bool openDatabase() {
-  DEBUG_PRINT("Opening database... ");
+  DEBUG_PRINT(F("Opening database... "));
 
   my_file = SD.open(db_name, FILE_WRITE);
 
   if (my_file) {
-    DEBUG_PRINTLN("DONE.");
+    DEBUG_PRINTLN(F("DONE."));
 
     // verbose debugging!
     recordLimit();
@@ -67,14 +67,14 @@ bool openDatabase() {
 
     return true;
   } else {
-    DEBUG_PRINT("Could not open file ");
+    DEBUG_PRINT(F("Could not open file "));
     DEBUG_PRINTLN(db_name);
     return false;
   }
 }
 
 void closeDatabase() {
-  DEBUG_PRINTLN("Closing database...");
+  DEBUG_PRINTLN(F("Closing database..."));
 
   // verbose debugging
   recordLimit();
@@ -82,8 +82,7 @@ void closeDatabase() {
   //selectAll();
 
   my_file.close();
-  DEBUG_PRINTLN("DONE.");
-
+  DEBUG_PRINTLN(F("DONE."));
 }
 
 // utility functions

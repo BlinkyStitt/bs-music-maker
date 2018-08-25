@@ -73,6 +73,9 @@ void updateLights(bool &lights_on) {
     DEBUG_PRINT(F(" | Music Stopped="));
     DEBUG_PRINT(g_music_stopped);
 
+    DEBUG_PRINT(F(" | "));
+    freeMemory(false);
+
     DEBUG_PRINT(F(" | ms since last frame="));
     DEBUG_PRINTLN(millis() - last_frame);
 

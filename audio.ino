@@ -52,23 +52,25 @@ void loadTracks(Playlist *playlist) {
 
   DEBUG_PRINTLN(F("Directory open."));
 
-  EDB_Status result;
+  // TODO: db stuff might be okay, but theres a bug in here somewhere
+  //EDB_Status result;
 
   // TODO: i guess we are using too much RAM. we need to do this more efficiently
+  // TODO: nope. its totally broken now
   while (playlist->num_tracks < MAX_PLAYLIST_TRACKS) {  // TODO: more than 10 is broken MAX_PLAYLIST_TRACKS) {
-    DEBUG_PRINT("Opening file... ");
+    DEBUG_PRINT(F("Opening file... "));
 
     File file = root.openNextFile();
     if (!file) {
-      DEBUG_PRINTLN("No more files.");
+      DEBUG_PRINTLN(F("No more files."));
       // If no more files, break out.
       break;
     }
 
-    DEBUG_PRINT("Found ");
+    DEBUG_PRINT(F("Found "));
 
     DEBUG_PRINT(file.name());
-    DEBUG_PRINT("... ");
+    DEBUG_PRINT(F("... "));
 
     if (!is_audio(file.name())) {
       DEBUG_PRINTLN(F("Skipped."));
@@ -77,7 +79,7 @@ void loadTracks(Playlist *playlist) {
       continue;
     }
 
-    DEBUG_PRINTLN("Saving...");
+    DEBUG_PRINTLN(F("Saving..."));
 
     strcpy(playlist->tracks[playlist->num_tracks], file.name());
 
@@ -85,22 +87,22 @@ void loadTracks(Playlist *playlist) {
 
     DEBUG_PRINT(F("Saved to track list as: #"));
     DEBUG_PRINT(playlist->num_tracks);
-    DEBUG_PRINT(" ");
+    DEBUG_PRINT(F(" "));
 
     // TODO: when we print this here it works, but when we print it below it is missing characters
     DEBUG_PRINTLN(playlist->tracks[playlist->num_tracks]);
 
     playlist->num_tracks++;
-
-    freeMemory();
   }
 
-  DEBUG_PRINTLN("Closing root...");
+  DEBUG_PRINTLN(F("Closing root..."));
   root.close();
 
+  // TODO: database stuff is broken. fix it
+  /*
   openDatabase();
 
-  DEBUG_PRINT("Reading database row #");
+  DEBUG_PRINT(F("Reading database row #"));
   DEBUG_PRINTLN(playlist->database_id);
 
   // TODO: wth. this is showing 0 when the db is first opened, then 1347235411 here
@@ -116,29 +118,35 @@ void loadTracks(Playlist *playlist) {
     // TODO: actually check result here
 
     if (playlist->database_id != playlist_data_buffer.playlist_id) {
-      DEBUG_PRINTLN("ERROR!");
+      DEBUG_PRINTLN(F("ERROR!"));
       while(1)
         ;
     }
 
     if (playlist_data_buffer.next_track > playlist->num_tracks) {
-      DEBUG_PRINTLN("Existing record has invalid track count.");
+      DEBUG_PRINTLN(F("Existing record has invalid track count."));
       // this playlist is in the database, but next_track has an invalid value
       playlist_data_buffer.next_track = 0;
 
-      DEBUG_PRINT("Updating record #");
+      DEBUG_PRINT(F("Updating record #"));
       DEBUG_PRINTLN(playlist_data_buffer.playlist_id);
-      result = db.updateRec(playlist_data_buffer.playlist_id, EDB_REC playlist_data_buffer);
+
+      // TODO: fix thiS
+      //result = db.updateRec(playlist_data_buffer.playlist_id, EDB_REC playlist_data_buffer);
+      DEBUG_PRINTLN(F("JUST KIDDING! Db stuff is broken"));
     }
   } else {
-    DEBUG_PRINTLN("New record.");
+    DEBUG_PRINTLN(F("New record."));
 
     playlist_data_buffer.playlist_id = playlist->database_id;
 
     playlist_data_buffer.next_track = 0;
     playlist_data_buffer.play_count = 0;
 
-    result = db.insertRec(playlist_data_buffer.playlist_id, EDB_REC playlist_data_buffer);
+    // TODO: this isn't right. this inserts at id, but shifts everything after it
+    // TODO: fix thiS
+    //result = db.insertRec(playlist_data_buffer.playlist_id, EDB_REC playlist_data_buffer);
+    DEBUG_PRINTLN(F("JUST KIDDING! Db stuff is broken"));
   }
 
   // TODO: check the result!
@@ -165,25 +173,33 @@ void loadTracks(Playlist *playlist) {
   DEBUG_PRINT(F(" -> "));
   DEBUG_PRINTLN(playlist->play_count);
 
-  DEBUG_PRINT(F("num_tracks: "));
-  DEBUG_PRINTLN(playlist->num_tracks);
-
-  for (int i = 0; i < playlist->num_tracks; i++) {
-    DEBUG_PRINT(" - ");
-    DEBUG_PRINTLN(playlist->tracks[i]);
-  }
+  */
+  playlist->next_track = 0;
+  playlist->play_count = 0;
 
   if (!playlist->num_tracks) {
-    DEBUG_PRINTLN("No tracks loaded!");
+    DEBUG_PRINTLN(F("No tracks loaded!"));
     while (1)
       ;
   }
 
+  printPlaylist(playlist);
+
   DEBUG_PRINTLN(F("Tracks loaded."));
 }
 
+void printPlaylist(Playlist *playlist) {
+  DEBUG_PRINT(F("num_tracks: "));
+  DEBUG_PRINTLN(playlist->num_tracks);
+
+  for (int i = 0; i < playlist->num_tracks; i++) {
+    DEBUG_PRINT(F(" - "));
+    DEBUG_PRINTLN(playlist->tracks[i]);
+  }
+}
+
 void loadPlaylists() {
-  DEBUG_PRINTLN("Loading playlists...");
+  DEBUG_PRINTLN(F("Loading playlists..."));
 
   // TODO: v2: recurse dirs for playlists instead of hard coding
   // TODO: v2: read this from config in /words instead
@@ -223,7 +239,7 @@ void loadPlaylists() {
   // end night sounds
 #endif
 
-  DEBUG_PRINTLN("Playlists loaded.");
+  DEBUG_PRINTLN(F("Playlists loaded."));
 }
 
 // pass play_count and current_track by reference so we can support multiple playlists
@@ -254,7 +270,7 @@ void playTrackFromPlaylist(Playlist *playlist) {
     if (playlist->next_track >= playlist->num_tracks) {
       playlist->next_track = 0;
     }
-    DEBUG_PRINT(F("Saving next track to database: "));
+    DEBUG_PRINT(F("Next track: "));
     DEBUG_PRINTLN(playlist->next_track);
   }
 

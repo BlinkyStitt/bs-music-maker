@@ -111,7 +111,7 @@ void setup() {
 
   music_player.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
 
-  setupDatabase();
+  //setupDatabase();
 
   loadPlaylists();
 
@@ -176,7 +176,7 @@ bool g_music_stopped = true;
 
 // run when START_PIN is RISING
 void playMotionActivated() {
-  playTrackFromPlaylist(&playlists[PLAYLIST_MUSIC]);
+  //playTrackFromPlaylist(&playlists[PLAYLIST_MUSIC]);
 }
 
 // loop for motion activated sounds for a adopted porta potty
@@ -196,13 +196,17 @@ void loop() {
     g_music_stopped = music_player.stopped();
   }
 
+  EVERY_N_MILLISECONDS(1000) {
+    printPlaylist(&playlists[PLAYLIST_MUSIC]);
+  }
+
   if (g_music_stopped) {
     // TODO: this is simply flapping on and off... test-motion-sensor doesn't have this behavior. wtf is going on!
     // apparently our PIR is sensitive to interference. often this is radio, but our amp causing the same issues.
     // AM312 PIR is less sensitive
     if (true or digitalRead(START_PIN) == HIGH) {
       // there is still motion. start a new song and stay on
-      DEBUG_PRINTLN("Motion detected!");
+      DEBUG_PRINTLN(F("Motion detected!"));
       playMotionActivated();
       g_lights_on = true;
       off_frames = 0;
