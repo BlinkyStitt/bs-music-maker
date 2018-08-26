@@ -45,8 +45,17 @@ void ISR() {
   // TODO: is there anything we actually want to do during the interrupt?
 }
 
-void sleep() {
-  DEBUG_PRINTLN("Sleeping...");
+void sleepUntilInterrupt() {
+  DEBUG_PRINTLN("Sleeping... (Serial will disconnect)");
+
+  if (VS1053_RESET != -1) {
+    // turn off music player
+    digitalWrite(VS1053_RESET, LOW);
+    delay(100);
+  }
+
+  // everything should already be off by now, but just in case...
+  fill_solid(leds, num_LEDs, CRGB::Black);
 
 #ifdef DEBUG
   Serial.end();
@@ -60,24 +69,14 @@ void sleep() {
 #ifdef DEBUG
   USBDevice.attach(); // Re-attach the USB, audible sound on windows machines
 
-  // Simple indication of being awake
-  digitalWrite(RED_LED, HIGH); // turn the LED on
-  delay(100);
-  digitalWrite(RED_LED, LOW); // turn the LED off
-  delay(100);
-  digitalWrite(RED_LED, HIGH); // turn the LED on
-  delay(100);
-  digitalWrite(RED_LED, LOW); // turn the LED off
-
   // TODO: might need more of a delay here for serial to work well
-
   Serial.begin(115200);
-
-  delay(1000);
-  while (!Serial) {
-    ; // wait for serial port to connect so we can watch all prints during setup
-  }
 
   DEBUG_PRINTLN("Awake!");
 #endif
+
+  if (VS1053_RESET != -1) {
+    // turn the music player back on
+    setupMusicPlayer();
+  }
 }

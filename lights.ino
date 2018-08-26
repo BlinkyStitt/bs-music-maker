@@ -21,7 +21,7 @@ void setupLights() {
   // TODO: maybe run it without lights to see max power draw and subtract that from 500
   // we have to leave room for the amp
   // TODO: tune this! we also want to make sure we conserve battery so we might want to turn this down more
-  FastLED.setMaxPowerInVoltsAndMilliamps(3.3, 100);
+  FastLED.setMaxPowerInVoltsAndMilliamps(3.3, 200);
 
   // neopixel
   FastLED.addLeds<LED_CHIPSET, LED_DATA>(leds, num_LEDs).setCorrection(TypicalSMD5050);
@@ -43,10 +43,10 @@ void lightPattern() {
   static const int ms_per_led = 4 * 1000 / frames_per_second;   // 4 frames
   static int shift;
 
-  static unsigned int distance = num_LEDs / 4;  // max(min_distance, max_distance / (1+nearby_peers));  // min 5, max numLEDs + a few for fade rate
+  static unsigned int distance = num_LEDs / 6;  // max(min_distance, max_distance / (1+nearby_peers));  // min 5, max numLEDs + a few for fade rate
   // TODO: change distance based on how many peers are nearby?
   // todo: fade slower (32) for larger distances
-  fadeToBlackBy(leds, num_LEDs, 32);
+  fadeLightBy(leds, num_LEDs, 24);
 
   // shift the pattern based on peer id and then shift more slowly over time
   shift = peer_shift + millis() / ms_per_led;
@@ -79,60 +79,60 @@ void updateLights() {
     if (g_lights_on) {
       lightPattern();
     } else {
-      fadeToBlackBy(leds, num_LEDs, 32);
+      fadeToBlackBy(leds, num_LEDs, 16);
     }
 
     #ifdef DEBUG
-        // debugging lights
+      // debugging lights
 
-        int millis_wrapped = millis() % 10000;
-        if (millis_wrapped < 1000) {
+      int millis_wrapped = millis() % 10000;
+      if (millis_wrapped < 1000) {
+        DEBUG_PRINT(F(" "));
+
+        if (millis_wrapped < 100) {
           DEBUG_PRINT(F(" "));
 
-          if (millis_wrapped < 100) {
+          if (millis_wrapped < 10) {
             DEBUG_PRINT(F(" "));
-
-            if (millis_wrapped < 10) {
-              DEBUG_PRINT(F(" "));
-            }
           }
         }
-        DEBUG_PRINT(millis_wrapped);
+      }
+      DEBUG_PRINT(millis_wrapped);
 
-        DEBUG_PRINT(F(": "));
-        for (int i = 0; i < num_LEDs; i++) {
-          if (leds[i]) {
-            // TODO: better logging?
-            DEBUG_PRINT(F("X"));
-          } else {
-            DEBUG_PRINT(F("O"));
-          }
+      DEBUG_PRINT(F(": "));
+      for (int i = 0; i < num_LEDs; i++) {
+        if (leds[i]) {
+          // TODO: better logging?
+          DEBUG_PRINT(F("X"));
+        } else {
+          DEBUG_PRINT(F("O"));
         }
+      }
 
-        if (!sd_setup) {
-          DEBUG_PRINT(F(" | !SD"));
-        }
+      if (!sd_setup) {
+        DEBUG_PRINT(F(" | !SD"));
+      }
 
-        if (!config_setup) {
-          DEBUG_PRINT(F(" | !Conf"));
-        }
+      if (!config_setup) {
+        DEBUG_PRINT(F(" | !Conf"));
+      }
 
-        DEBUG_PRINT(" | ");
-        freeMemory(false);
+      DEBUG_PRINT(" | ");
+      freeMemory(false);
 
-        DEBUG_PRINT(" | Next Track=");
-        DEBUG_PRINT(g_next_track);
+      DEBUG_PRINT(" | Next Track=");
+      DEBUG_PRINT(g_next_track);
 
-        DEBUG_PRINT(" | Music Stopped=");
-        DEBUG_PRINT(g_music_stopped);
+      DEBUG_PRINT(" | Music Stopped=");
+      DEBUG_PRINT(g_music_stopped);
 
-        DEBUG_PRINT(" | Motion=");
-        DEBUG_PRINT(digitalRead(START_PIN));
+      DEBUG_PRINT(" | Motion=");
+      DEBUG_PRINT(digitalRead(START_PIN));
 
-        DEBUG_PRINT(F(" | ms since last frame="));
-        DEBUG_PRINTLN(millis() - last_frame);
+      DEBUG_PRINT(F(" | ms since last frame="));
+      DEBUG_PRINTLN(millis() - last_frame);
 
-        last_frame = millis();
+      last_frame = millis();
     #endif
 
     // display the colors

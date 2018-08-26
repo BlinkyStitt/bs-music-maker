@@ -78,7 +78,7 @@ void setupConfig() {
   DEBUG_PRINT(F("default_brightness: "));
   if (!default_brightness) {
     DEBUG_PRINT(F("(default) "));
-    default_brightness = 200; // TODO: tune this
+    default_brightness = 255;
   }
   DEBUG_PRINTLN(default_brightness);
 
